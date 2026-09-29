@@ -21,24 +21,26 @@ Full audit trail of every expense state change (actor, timestamp, transition)
 JWT auth with short-lived access tokens and refresh tokens
 React frontend (Orbit) that exercises the real API endpoints
 CI pipeline: pytest with an 80% coverage gate, bandit security scan, pip-audit
-Quick start
+Setup
+No-sudo setup
+If you do not have administrator access on your laptop, install the project
+dependencies into your user account and run the server with python3:
+
 git clone https://github.com/gahirensengajolie/expense-reimbursement-api.git
 cd expense-reimbursement-api
 python3 -m pip install --user -r requirements.txt
 cp .env.example .env
 python3 -m uvicorn app.main:app --reload
-Visit http://127.0.0.1:8000 for the Orbit frontend or
-http://127.0.0.1:8000/docs for interactive Swagger docs.
-
-The --user install above requires no sudo and no virtual environment.
-If Ubuntu reports the environment is externally managed, add
---break-system-packages to the install command (keep --user):
+This does not require sudo or a virtual environment. If Ubuntu reports that
+the environment is externally managed, add --break-system-packages to the
+install command, but keep using --user:
 
 python3 -m pip install --user --break-system-packages -r requirements.txt
-Virtual-environment setup (alternative)
+Virtual-environment setup
 git clone https://github.com/gahirensengajolie/expense-reimbursement-api.git
 cd expense-reimbursement-api
 # Ubuntu/Debian only: install the venv module if `python3 -m venv` fails.
+# Use `python3.10-venv` instead if your installed Python is specifically 3.10.
 sudo apt update
 sudo apt install -y python3-venv
 python3 -m venv .venv
@@ -46,23 +48,19 @@ source .venv/bin/activate
 python3 -m pip install -r requirements.txt
 cp .env.example .env
 python3 -m uvicorn app.main:app --reload
-If the virtual environment was attempted before installing python3-venv,
-remove the incomplete environment and recreate it:
+Visit http://127.0.0.1:8000 for the Orbit frontend or
+http://127.0.0.1:8000/docs for interactive Swagger docs.
 
-rm -rf .venv
-python3 -m venv .venv
-source .venv/bin/activate
-python3 -m pip install -r requirements.txt
 React frontend development
 The frontend is built with React, JSX, and Vite. Run the backend in one
-terminal, then start the Vite dev server in a second terminal:
+terminal, then start the Vite development server in a second terminal:
 
 npm run install:frontend
 npm run dev
 Run those commands from the project root. Open http://127.0.0.1:5173. Vite
-proxies /api/* requests to the FastAPI server on port 8000, so the React UI
-exercises the real backend endpoints. If port 8000 is busy, run FastAPI on
-another port and point Vite to it:
+proxies /api/* requests to the FastAPI server on port 8000, so the React
+UI exercises the real backend endpoints. If port 8000 is busy, run FastAPI
+on another port and point Vite to it:
 
 python3 -m uvicorn app.main:app --reload --port 8001
 VITE_API_TARGET=http://127.0.0.1:8001 npm run frontend:dev
@@ -71,15 +69,8 @@ To create a production frontend build served by FastAPI:
 npm run install:frontend
 npm run build
 python3 -m uvicorn app.main:app --reload
-The production build is written to frontend/dist/ and served from
+The production build is written to frontend/dist/ and is served from
 http://127.0.0.1:8000.
-
-Port already in use
-If Uvicorn reports ERROR: [Errno 98] Address already in use, another copy of
-the API is already running on port 8000. Open the existing server at
-http://127.0.0.1:8000, or start a second copy on another port with
---port 8001. Use Ctrl+C in the terminal running the old server to stop it
-before starting the default port again.
 
 Test the approval workflow locally
 New registrations intentionally start as employee accounts. This prevents a
@@ -101,6 +92,28 @@ the People & permissions panel:
 python3 scripts/set_role.py admin@example.com admin
 The approval queue, audit timeline, policy flags, reimbursement transition,
 and role management are all connected to the existing FastAPI endpoints.
+
+Setup troubleshooting
+If the virtual environment was attempted before installing python3-venv,
+remove the incomplete environment and recreate it:
+
+rm -rf .venv
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -r requirements.txt
+python3 -m uvicorn app.main:app --reload
+On distributions where python3-venv is not available, install the package
+matching the active interpreter instead, for example:
+
+sudo apt install -y python3.10-venv
+Port already in use
+If Uvicorn reports ERROR: [Errno 98] Address already in use, another copy of
+the API is already running on port 8000. Open the existing server at
+http://127.0.0.1:8000, or start a second copy on another port:
+
+python3 -m uvicorn app.main:app --reload --port 8001
+Use Ctrl+C in the terminal running the old server to stop it before starting
+the default port again. There is no need to reinstall the dependencies.
 
 Running tests
 pytest
