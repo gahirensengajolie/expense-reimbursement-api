@@ -23,7 +23,6 @@ dependencies into your user account and run the server with `python3`:
 
 ```bash
 git clone <repository name >
-git clone <repository-url>
 cd expense-api
 python3 -m pip install --user -r requirements.txt
 python3 -m uvicorn app.main:app --reload
