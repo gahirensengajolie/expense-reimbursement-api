@@ -5,6 +5,7 @@ from sqlalchemy import Column, Integer, String, Float, Enum, DateTime, ForeignKe
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
+from app.core.policies import evaluate_spending_policy
 
 
 class ExpenseStatus(str, enum.Enum):
@@ -43,6 +44,18 @@ class Expense(Base):
     )
 
     owner = relationship("User", back_populates="expenses", foreign_keys=[owner_id])
+
+    @property
+    def policy_flagged(self) -> bool:
+        return evaluate_spending_policy(self.category, self.amount)[0]
+
+    @property
+    def policy_limit(self) -> float:
+        return evaluate_spending_policy(self.category, self.amount)[1]
+
+    @property
+    def policy_flag_reason(self) -> str:
+        return evaluate_spending_policy(self.category, self.amount)[2]
 
 
 class AuditLog(Base):

@@ -8,4 +8,4 @@ htmlcov/
 venv/
 .venv/
 *.egg-info/
-.env.example
+uploads/

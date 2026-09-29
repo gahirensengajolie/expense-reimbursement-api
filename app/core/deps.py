@@ -8,7 +8,7 @@ from app.models.user import User, RoleEnum
 from app.repositories.user_repository import UserRepository
 
 # tokenUrl is just for the OpenAPI docs "Authorize" button; actual login is /auth/login
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> User:
@@ -26,7 +26,12 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if user_id is None:
         raise credentials_exception
 
-    user = UserRepository(db).get_by_id(int(user_id))
+    try:
+        user_id = int(user_id)
+    except (TypeError, ValueError):
+        raise credentials_exception
+
+    user = UserRepository(db).get_by_id(user_id)
     if user is None or not user.is_active:
         raise credentials_exception
 

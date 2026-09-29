@@ -18,7 +18,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def create_token(data: dict, expires_delta: timedelta, token_type: str = "access") -> str:
+def create_token(data: dict, expires_delta: timedelta, token_type: Optional[str] = None) -> str:
+    token_type = token_type or "access"
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + expires_delta
     to_encode.update({"exp": expire, "type": token_type})
