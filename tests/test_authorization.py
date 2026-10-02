@@ -6,7 +6,8 @@ Reference) and privilege-escalation bugs: cases where a user can read or
 modify data that isn't theirs simply by guessing/incrementing an ID, or by
 calling an endpoint their role shouldn't be allowed to call.
 """
-from tests.conftest import register_and_login, make_admin, make_manager
+
+from tests.conftest import make_admin, make_manager, register_and_login
 
 
 def create_expense(client, headers, amount=50.0, category="travel"):
@@ -74,11 +75,12 @@ def test_employee_cannot_call_review_endpoint(client, db_session):
 
 
 def test_manager_cannot_approve_own_expense(client, db_session):
+    # Managers can no longer file expenses, but someone promoted after
+    # submitting one as an employee must still not be able to approve it.
     manager_headers = register_and_login(client, "manager1@example.com")
-    make_manager(db_session, "manager1@example.com")
-
     expense_id = create_expense(client, manager_headers)
     client.post(f"/expenses/{expense_id}/submit", headers=manager_headers)
+    make_manager(db_session, "manager1@example.com")
 
     resp = client.post(
         f"/expenses/{expense_id}/review",

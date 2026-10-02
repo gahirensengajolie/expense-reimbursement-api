@@ -10,6 +10,7 @@ into the right HTTP status codes at the edge of the app.
 
 class AppError(Exception):
     """Base class for all domain errors."""
+
     def __init__(self, message: str):
         self.message = message
         super().__init__(message)
@@ -17,24 +18,29 @@ class AppError(Exception):
 
 class NotFoundError(AppError):
     """Resource doesn't exist, or the caller has no right to know it does."""
+
     pass
 
 
 class ForbiddenError(AppError):
     """Caller is authenticated but not allowed to perform this action."""
+
     pass
 
 
 class ConflictError(AppError):
     """Request is well-formed but violates current state (e.g. bad transition)."""
+
     pass
 
 
 class BadRequestError(AppError):
     """Request violates a business rule not covered by schema validation."""
+
     pass
 
 
 class AuthenticationError(AppError):
     """Login/credential/token failure."""
+
     pass

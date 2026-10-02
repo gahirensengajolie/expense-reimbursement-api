@@ -3,8 +3,8 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import require_roles
-from app.models.user import User, RoleEnum
-from app.schemas.user import UserOut, RoleUpdateRequest
+from app.models.user import RoleEnum, User
+from app.schemas.user import RoleUpdateRequest, UserOut
 from app.services.admin_service import AdminService
 
 router = APIRouter(prefix="/admin", tags=["admin"])

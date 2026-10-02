@@ -5,14 +5,15 @@ service/repository split: business logic can be verified in isolation,
 which is faster to run and pins down exactly where a bug lives (service
 vs. router vs. framework wiring) when a test fails.
 """
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.database import Base
 from app.core.security import hash_password
-from app.exceptions import ForbiddenError, ConflictError, NotFoundError
-from app.models.user import User, RoleEnum
+from app.exceptions import ConflictError, ForbiddenError, NotFoundError
+from app.models.user import RoleEnum, User
 from app.services.expense_service import ExpenseService
 
 engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})

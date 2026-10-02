@@ -1,35 +1,42 @@
+from pathlib import Path
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
+from fastapi.staticfiles import StaticFiles
 
+from app.core.config import settings, validate_production_settings
 from app.core.database import Base, engine
 from app.exceptions import (
-    NotFoundError,
-    ForbiddenError,
-    ConflictError,
-    BadRequestError,
     AuthenticationError,
+    BadRequestError,
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
 )
-from app.routers import auth, expenses, admin
-from app.routers.auth import limiter
+from app.routers import admin, auth, expenses
 
-# Creates tables on startup. Fine for dev/demo; use Alembic migrations
-# for anything you'd call "production".
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Expense & Reimbursement API", version="0.1.0")
+app = FastAPI(
+    title="Expense & Reimbursement API",
+    description="A secure API for employee expense approval and reimbursement workflows.",
+    version="1.1.0",
+)
 
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+@app.on_event("startup")
+def reset_runtime_limits():
+    validate_production_settings(settings)
+    auth.reset_login_limits()
 
 
-# Single place mapping domain exceptions (raised by the service layer,
-# with zero knowledge of HTTP) to actual status codes. This is what lets
-# services be unit-tested without FastAPI in the loop at all.
 def _error_handler(status_code: int):
     async def handler(request: Request, exc: Exception):
-        return JSONResponse(status_code=status_code, content={"detail": exc.message})
+        return JSONResponse(
+            status_code=status_code,
+            content={"detail": exc.message},
+        )
+
     return handler
 
 
@@ -43,11 +50,11 @@ app.add_exception_handler(AuthenticationError, _error_handler(401))
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
-    # Basic hardening headers — small effort, real value against clickjacking,
-    # MIME sniffing, and leaking data via referrer.
+
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
+
     return response
 
 
@@ -56,6 +63,23 @@ app.include_router(expenses.router)
 app.include_router(admin.router)
 
 
-@app.get("/health")
+@app.get(
+    "/health",
+    tags=["system"],
+    summary="Health check",
+)
 def health_check():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "service": "expense-reimbursement-api",
+        "version": "1.1.0",
+    }
+
+
+# Serve the React production build from the same FastAPI origin.
+# Vite writes to frontend/dist; the source directory remains available for npm run dev.
+# This catch-all is intentionally last so API and health routes always win.
+frontend_root = Path(__file__).resolve().parent.parent / "frontend"
+frontend_dir = frontend_root / "dist" if (frontend_root / "dist").exists() else frontend_root
+if frontend_dir.exists():
+    app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")

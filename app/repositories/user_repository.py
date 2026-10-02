@@ -1,8 +1,8 @@
-from typing import Optional, List
+from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.models.user import User, RoleEnum
+from app.models.user import RoleEnum, User
 
 
 class UserRepository:
@@ -21,13 +21,10 @@ class UserRepository:
     def get_by_email(self, email: str) -> Optional[User]:
         return self.db.query(User).filter(User.email == email).first()
 
-    def list_all(self) -> List[User]:
+    def list_all(self) -> list[User]:
         return self.db.query(User).all()
 
     def create(self, email: str, hashed_password: str, full_name: str) -> User:
-        # role is deliberately not a parameter here from external callers'
-        # payloads -- new users always start as employee. Role changes go
-        # through update_role, which only the admin service path calls.
         user = User(
             email=email,
             hashed_password=hashed_password,

@@ -36,7 +36,9 @@ def client(db_session):
     app.dependency_overrides.clear()
 
 
-def register_and_login(client, email="user@example.com", password="StrongPass123", full_name="Test User"):
+def register_and_login(
+    client, email="user@example.com", password="StrongPass123", full_name="Test User"
+):
     client.post(
         "/auth/register",
         json={"email": email, "password": password, "full_name": full_name},
@@ -47,7 +49,7 @@ def register_and_login(client, email="user@example.com", password="StrongPass123
 
 
 def make_admin(db_session, email):
-    from app.models.user import User, RoleEnum
+    from app.models.user import RoleEnum, User
 
     user = db_session.query(User).filter(User.email == email).first()
     user.role = RoleEnum.admin
@@ -55,7 +57,7 @@ def make_admin(db_session, email):
 
 
 def make_manager(db_session, email):
-    from app.models.user import User, RoleEnum
+    from app.models.user import RoleEnum, User
 
     user = db_session.query(User).filter(User.email == email).first()
     user.role = RoleEnum.manager

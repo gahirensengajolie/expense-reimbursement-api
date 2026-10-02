@@ -1,13 +1,20 @@
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import get_current_user, require_roles
-from app.models.user import User, RoleEnum
 from app.models.expense import ExpenseStatus
-from app.schemas.expense import ExpenseCreate, ExpenseUpdate, ExpenseOut, ExpenseReview
+from app.models.user import RoleEnum, User
+from app.schemas.expense import (
+    AuditLogOut,
+    ExpenseCreate,
+    ExpenseOut,
+    ExpenseReview,
+    ExpenseSummary,
+    ExpenseUpdate,
+)
 from app.services.expense_service import ExpenseService
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
@@ -17,13 +24,14 @@ router = APIRouter(prefix="/expenses", tags=["expenses"])
 def create_expense(
     payload: ExpenseCreate,
     db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_roles(RoleEnum.employee)),
 ):
+    """Only employees file expenses; managers and admins review and pay them."""
     service = ExpenseService(db)
     return service.create(user, payload.category, payload.amount, payload.description)
 
 
-@router.get("", response_model=List[ExpenseOut])
+@router.get("", response_model=list[ExpenseOut])
 def list_expenses(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
@@ -35,8 +43,20 @@ def list_expenses(
     return service.list(user, status=status_filter, limit=limit, offset=offset)
 
 
+# Declared before "/{expense_id}" so "summary" is not parsed as an expense id.
+@router.get("/summary", response_model=ExpenseSummary)
+def expense_summary(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_roles(RoleEnum.manager, RoleEnum.admin)),
+):
+    """Business-wide spending totals for the manager/admin dashboard."""
+    return ExpenseService(db).summary()
+
+
 @router.get("/{expense_id}", response_model=ExpenseOut)
-def get_expense(expense_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def get_expense(
+    expense_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+):
     service = ExpenseService(db)
     return service.get(expense_id, user)
 
@@ -53,7 +73,9 @@ def update_expense(
 
 
 @router.delete("/{expense_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_expense(expense_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def delete_expense(
+    expense_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+):
     """
     Deletes a DRAFT expense only. Once submitted, an expense enters the
     audit trail and must be tracked (rejected/withdrawn-back-to-draft),
@@ -65,9 +87,33 @@ def delete_expense(expense_id: int, db: Session = Depends(get_db), user: User = 
 
 
 @router.post("/{expense_id}/submit", response_model=ExpenseOut)
-def submit_expense(expense_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def submit_expense(
+    expense_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+):
     service = ExpenseService(db)
     return service.submit(expense_id, user)
+
+
+@router.post("/{expense_id}/resubmit", response_model=ExpenseOut)
+def resubmit_expense(
+    expense_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Return a rejected expense to the approval queue."""
+    service = ExpenseService(db)
+    return service.resubmit(expense_id, user)
+
+
+@router.get("/{expense_id}/audit", response_model=list[AuditLogOut])
+def expense_audit_history(
+    expense_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """View the lifecycle history for an accessible expense."""
+    service = ExpenseService(db)
+    return service.audit_history(expense_id, user)
 
 
 @router.post("/{expense_id}/review", response_model=ExpenseOut)

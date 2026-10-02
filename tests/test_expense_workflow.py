@@ -1,4 +1,4 @@
-from tests.conftest import register_and_login, make_manager
+from tests.conftest import make_manager, register_and_login
 
 
 def create_expense(client, headers, amount=50.0):

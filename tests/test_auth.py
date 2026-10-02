@@ -64,7 +64,9 @@ def test_login_wrong_password(client):
 
 def test_login_nonexistent_user_same_error_as_wrong_password(client):
     # Guards against user-enumeration: both cases must look identical.
-    resp = client.post("/auth/login", json={"email": "ghost@example.com", "password": "whatever123"})
+    resp = client.post(
+        "/auth/login", json={"email": "ghost@example.com", "password": "whatever123"}
+    )
     assert resp.status_code == 401
     assert resp.json()["detail"] == "Invalid email or password"
 

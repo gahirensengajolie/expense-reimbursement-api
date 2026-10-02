@@ -1,11 +1,11 @@
 from sqlalchemy.orm import Session
 
 from app.core.security import (
-    hash_password,
-    verify_password,
     create_access_token,
     create_refresh_token,
     decode_token,
+    hash_password,
+    verify_password,
 )
 from app.exceptions import AuthenticationError, BadRequestError, ForbiddenError
 from app.models.user import User
@@ -45,7 +45,14 @@ class AuthService:
         if not data or data.get("type") != "refresh":
             raise AuthenticationError("Invalid refresh token")
 
-        user = self.repo.get_by_id(int(data["sub"]))
+        try:
+            user_id = int(data["sub"])
+        except (KeyError, TypeError, ValueError):
+            # Not chained: a malformed token's parsing detail shouldn't
+            # surface in the auth error response.
+            raise AuthenticationError("Invalid refresh token") from None
+
+        user = self.repo.get_by_id(user_id)
         if not user or not user.is_active:
             raise AuthenticationError("Invalid refresh token")
 

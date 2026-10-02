@@ -1,9 +1,7 @@
-from typing import List
-
 from sqlalchemy.orm import Session
 
-from app.exceptions import NotFoundError, BadRequestError
-from app.models.user import User, RoleEnum
+from app.exceptions import BadRequestError, NotFoundError
+from app.models.user import RoleEnum, User
 from app.repositories.user_repository import UserRepository
 
 
@@ -11,7 +9,7 @@ class AdminService:
     def __init__(self, db: Session):
         self.repo = UserRepository(db)
 
-    def list_users(self) -> List[User]:
+    def list_users(self) -> list[User]:
         return self.repo.list_all()
 
     def update_role(self, admin: User, user_id: int, role: RoleEnum) -> User:
