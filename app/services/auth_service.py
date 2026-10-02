@@ -45,12 +45,7 @@ class AuthService:
         if not data or data.get("type") != "refresh":
             raise AuthenticationError("Invalid refresh token")
 
-        try:
-            user_id = int(data["sub"])
-        except (KeyError, TypeError, ValueError):
-            raise AuthenticationError("Invalid refresh token")
-
-        user = self.repo.get_by_id(user_id)
+        user = self.repo.get_by_id(int(data["sub"]))
         if not user or not user.is_active:
             raise AuthenticationError("Invalid refresh token")
 

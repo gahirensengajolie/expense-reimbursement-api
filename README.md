@@ -1,13 +1,11 @@
 # Expense & Reimbursement API
 
-A full-stack expense management system: a FastAPI backend for submitting and
-approving employee expenses, plus a React (Vite) frontend — built to
+A backend API for submitting and approving employee expenses, built to
 demonstrate real-world backend engineering, QA, and application security
-practices. Created as a backend-engineering portfolio project.
+practices — built as a backend-engineering intern portfolio project.
 
 ## Stack
 
-- **React + Vite** — frontend (JSX, dev server proxies API requests to the backend)
 - **FastAPI** — web framework
 - **SQLAlchemy** — ORM (SQLite by default, swap `DATABASE_URL` for Postgres)
 - **JWT** (python-jose) — access + refresh token auth
@@ -16,196 +14,28 @@ practices. Created as a backend-engineering portfolio project.
 - **bandit / pip-audit** — security scanning
 - **GitHub Actions** — CI
 
-## Features
-
-- Expense lifecycle as a strict state machine: `draft → submitted → approved/rejected → reimbursed`
-- Role-based access control (employee / manager / admin) with ownership isolation
-- Spending policies that flag expenses over category limits, with an audit event
-- Full audit trail of every expense state change (actor, timestamp, transition)
-- JWT auth with short-lived access tokens and refresh tokens
-- React frontend (Orbit) that exercises the real API endpoints
-- CI pipeline: pytest with an 80% coverage gate, bandit security scan, pip-audit
-
 ## Setup
 
-### No-sudo setup
-
-If you do not have administrator access on your laptop, install the project
-dependencies into your user account and run the server with `python3`:
-
 ```bash
-git clone https://github.com/gahirensengajolie/expense-reimbursement-api.git
-cd expense-reimbursement-api
-python3 -m pip install --user -r requirements.txt
-cp .env.example .env
-python3 -m uvicorn app.main:app --reload
+git clone <your-repo-url>
+cd expense-api
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env            # then edit SECRET_KEY to a real random value
+uvicorn app.main:app --reload
 ```
 
-This does not require `sudo` or a virtual environment. If Ubuntu reports that
-the environment is externally managed, add `--break-system-packages` to the
-install command, but keep using `--user`:
-
-```bash
-python3 -m pip install --user --break-system-packages -r requirements.txt
-```
-
-### Virtual-environment setup
-
-```bash
-git clone https://github.com/gahirensengajolie/expense-reimbursement-api.git
-cd expense-reimbursement-api
-# Ubuntu/Debian only: install the venv module if `python3 -m venv` fails.
-# Use `python3.10-venv` instead if your installed Python is specifically 3.10.
-sudo apt update
-sudo apt install -y python3-venv
-python3 -m venv .venv
-source .venv/bin/activate
-python3 -m pip install -r requirements.txt
-cp .env.example .env
-python3 -m uvicorn app.main:app --reload
-```
-
-Visit `http://127.0.0.1:8000` for the Orbit frontend or
-`http://127.0.0.1:8000/docs` for interactive Swagger docs.
-
-### React frontend development
-
-The frontend is built with React, JSX, and Vite. Run the backend in one
-terminal, then start the Vite development server in a second terminal:
-
-```bash
-npm run install:frontend
-npm run dev
-```
-
-Run those commands from the project root. Open `http://127.0.0.1:5173`. Vite
-proxies `/api/*` requests to the FastAPI server on port `8000`, so the React
-UI exercises the real backend endpoints. If port `8000` is busy, run FastAPI
-on another port and point Vite to it:
-
-```bash
-python3 -m uvicorn app.main:app --reload --port 8001
-VITE_API_TARGET=http://127.0.0.1:8001 npm run frontend:dev
-```
-
-To create a production frontend build served by FastAPI:
-
-```bash
-npm run install:frontend
-npm run build
-python3 -m uvicorn app.main:app --reload
-```
-
-The production build is written to `frontend/dist/` and is served from
-`http://127.0.0.1:8000`.
-
-### Test the approval workflow locally
-
-New registrations intentionally start as `employee` accounts. This prevents a
-public signup from granting itself approval or admin permissions. To exercise
-the full workflow locally, create two accounts in Orbit: one employee who
-submits an expense and one reviewer account. Promote the reviewer with the
-development helper:
-
-```bash
-python3 scripts/set_role.py reviewer@example.com manager
-```
-
-Then use the following flow:
-
-1. Sign in as the employee and create an expense draft.
-2. Open its detail view and choose **Submit for review**.
-3. Sign out and sign in as the manager.
-4. Open **Approval queue** in the left navigation.
-5. Approve or reject the expense. Rejections require a reason.
-6. If approved, promote an account to `admin` to test **Mark reimbursed** and
-   the **People & permissions** panel:
-
-```bash
-python3 scripts/set_role.py admin@example.com admin
-```
-
-The approval queue, audit timeline, policy flags, reimbursement transition,
-and role management are all connected to the existing FastAPI endpoints.
-
-### Setup troubleshooting
-
-If the virtual environment was attempted before installing `python3-venv`,
-remove the incomplete environment and recreate it:
-
-```bash
-rm -rf .venv
-python3 -m venv .venv
-source .venv/bin/activate
-python3 -m pip install -r requirements.txt
-python3 -m uvicorn app.main:app --reload
-```
-
-On distributions where `python3-venv` is not available, install the package
-matching the active interpreter instead, for example:
-
-```bash
-sudo apt install -y python3.10-venv
-```
-
-### Port already in use
-
-If Uvicorn reports `ERROR: [Errno 98] Address already in use`, another copy of
-the API is already running on port `8000`. Open the existing server at
-`http://127.0.0.1:8000`, or start a second copy on another port:
-
-```bash
-python3 -m uvicorn app.main:app --reload --port 8001
-```
-
-Use `Ctrl+C` in the terminal running the old server to stop it before starting
-the default port again. There is no need to reinstall the dependencies.
+Visit `http://127.0.0.1:8000/docs` for interactive Swagger docs.
 
 ## Running tests
 
 ```bash
-pytest
-pytest --cov=app --cov-report=term-missing
-bandit -r app
-pip-audit -r requirements.txt
+pytest                                   # run all tests
+pytest --cov=app --cov-report=term-missing   # with coverage
+bandit -r app                            # static security scan
+pip-audit -r requirements.txt            # dependency vulnerability scan
 ```
-
-## API endpoints
-
-The API supports authenticated expense CRUD operations with ownership
-isolation, status filtering, limit/offset pagination, and role-based review
-permissions. Draft expenses can be edited or deleted by their owner. Once an
-expense is submitted, it remains in the audit trail and can only move through
-the workflow.
-
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| `POST` | `/expenses` | Create a draft expense |
-| `GET` | `/expenses` | List visible expenses with `status`, `limit`, and `offset` filters |
-| `GET` | `/expenses/{id}` | Read one accessible expense |
-| `PATCH` | `/expenses/{id}` | Update an owned draft |
-| `DELETE` | `/expenses/{id}` | Delete an owned draft |
-| `POST` | `/expenses/{id}/submit` | Submit an expense for review |
-| `POST` | `/expenses/{id}/review` | Manager/admin approval or rejection |
-| `POST` | `/expenses/{id}/resubmit` | Resubmit a rejected expense |
-| `POST` | `/expenses/{id}/reimburse` | Admin-only reimbursement |
-| `GET` | `/expenses/{id}/audit` | View the expense lifecycle audit trail |
-
-The startup path no longer requires `slowapi` to be installed. Login attempts
-are throttled per client and email in the current single-process deployment;
-production multi-worker deployments should move the counter to Redis.
-
-## Spending policies
-
-Each expense is evaluated against a category policy when it is created. The
-current defaults are travel `5000`, meals `500`, accommodation `3000`,
-equipment `10000`, training `2500`, and other categories `1000`. Amounts over
-the applicable limit are returned with `policy_flagged: true`, the applicable
-`policy_limit`, and a human-readable `policy_flag_reason`. A `policy_flagged`
-audit event is also recorded so managers can see why additional review was
-triggered. The policy evaluation is computed from the current category and
-amount, so changing policy code does not require a destructive database
-migration.
 
 ## Architecture
 
@@ -303,12 +133,9 @@ Security headers (`X-Content-Type-Options`, `X-Frame-Options`,
 `.env.example` documents required variables without real values.
 
 **A07 – Identification and Authentication Failures**
-Login is rate-limited (5 attempts per 60 seconds, keyed by client host +
-email) via a dependency-free in-memory limiter — see `_enforce_login_limit`
-in `app/routers/auth.py`. Login failure messages are identical whether the
-email exists or not, to avoid user enumeration. Note: the in-memory counter
-is per-process, so a multi-worker production deployment should move it to
-a shared store (e.g. Redis) to stay effective across workers.
+Login is rate-limited (5/min per IP) to slow brute-force attempts. Login
+failure messages are identical whether the email exists or not, to avoid
+user enumeration.
 
 **A09 – Security Logging and Monitoring Failures**
 Every expense state change is recorded in an `audit_logs` table (actor,
@@ -323,6 +150,3 @@ investigation of disputed approvals.
 - No account lockout after N failed logins (only rate limiting).
 - `pip-audit` runs in CI but doesn't block merges yet — findings are
   reviewed manually.
-- The login rate limiter is in-memory and per-process; fine for a single
-  deployment/demo, but would need a shared store (Redis) behind a
-  multi-worker production deployment.

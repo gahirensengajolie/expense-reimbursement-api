@@ -7,6 +7,10 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
     full_name: str = Field(min_length=1, max_length=100)
+    # Note: role is intentionally NOT accepted here on public signup.
+    # Only an admin endpoint should be able to assign manager/admin roles.
+    # This prevents privilege escalation via self-registration.
+
 
 class UserOut(BaseModel):
     id: int

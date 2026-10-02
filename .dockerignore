@@ -1,0 +1,11 @@
+.git
+.github
+.env
+*.db
+.coverage
+.pytest_cache
+.ruff_cache
+__pycache__
+tests
+frontend/node_modules
+frontend/dist

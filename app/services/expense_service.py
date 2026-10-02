@@ -2,7 +2,6 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from app.core.policies import evaluate_spending_policy
 from app.exceptions import NotFoundError, ForbiddenError, ConflictError
 from app.models.expense import Expense, ExpenseStatus, ALLOWED_TRANSITIONS
 from app.models.user import User, RoleEnum
@@ -58,16 +57,6 @@ class ExpenseService:
     def create(self, user: User, category: str, amount: float, description: str) -> Expense:
         expense = self.repo.create(user.id, category, amount, description)
         self.repo.add_audit_log(expense.id, user.id, "created", None, ExpenseStatus.draft)
-        flagged, _, reason = evaluate_spending_policy(category, amount)
-        if flagged:
-            self.repo.add_audit_log(
-                expense.id,
-                user.id,
-                "policy_flagged",
-                ExpenseStatus.draft,
-                ExpenseStatus.draft,
-                reason,
-            )
         return expense
 
     def get(self, expense_id: int, user: User) -> Expense:
@@ -86,14 +75,6 @@ class ExpenseService:
         # pulled into memory.
         owner_id = user.id if user.role == RoleEnum.employee else None
         return self.repo.list(owner_id=owner_id, status=status, limit=limit, offset=offset)
-
-    def count(self, user: User, status: Optional[ExpenseStatus] = None) -> int:
-        owner_id = user.id if user.role == RoleEnum.employee else None
-        return self.repo.count(owner_id=owner_id, status=status)
-
-    def audit_history(self, expense_id: int, user: User):
-        self._get_visible_or_404(expense_id, user)
-        return self.repo.list_audit_logs(expense_id)
 
     def update(self, expense_id: int, user: User, fields: dict) -> Expense:
         expense = self._get_visible_or_404(expense_id, user)
@@ -131,15 +112,6 @@ class ExpenseService:
         if expense.owner_id != user.id:
             raise ForbiddenError("Only the owner can submit this expense")
         return self._transition(expense, user, ExpenseStatus.submitted, "submitted")
-
-    def resubmit(self, expense_id: int, user: User) -> Expense:
-        expense = self._get_visible_or_404(expense_id, user)
-        if expense.owner_id != user.id:
-            raise ForbiddenError("Only the owner can resubmit this expense")
-        if expense.status != ExpenseStatus.rejected:
-            raise ConflictError("Only rejected expenses can be resubmitted")
-        self._transition(expense, user, ExpenseStatus.draft, "returned_to_draft")
-        return self._transition(expense, user, ExpenseStatus.submitted, "resubmitted")
 
     def review(self, expense_id: int, reviewer: User, approve: bool, comment: str) -> Expense:
         expense = self.repo.get_by_id(expense_id)

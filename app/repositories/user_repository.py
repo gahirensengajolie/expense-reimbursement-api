@@ -25,6 +25,9 @@ class UserRepository:
         return self.db.query(User).all()
 
     def create(self, email: str, hashed_password: str, full_name: str) -> User:
+        # role is deliberately not a parameter here from external callers'
+        # payloads -- new users always start as employee. Role changes go
+        # through update_role, which only the admin service path calls.
         user = User(
             email=email,
             hashed_password=hashed_password,

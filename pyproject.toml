@@ -1,0 +1,36 @@
+[tool.ruff]
+# Pinned to match the Python version this project actually runs on.
+# This matters beyond style: ruff's pyupgrade rules (UP) suggest newer
+# syntax based on this setting, and `str | None` (3.10+ only) is exactly
+# the syntax that broke the app under python3.9 earlier. Pinning this
+# stops ruff from ever suggesting that again.
+target-version = "py39"
+line-length = 100
+exclude = ["frontend", ".venv", "venv", "uploads", "__pycache__"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes (undefined names, unused imports, etc.)
+    "I",   # import sorting
+    "B",   # bugbear -- catches real bugs, not just style
+    "UP",  # pyupgrade -- modernize syntax, constrained by target-version above
+    "SIM", # flake8-simplify
+    "C4",  # flake8-comprehensions
+]
+ignore = [
+    "E501", # line length is handled by the formatter, not the linter
+    "B008", # FastAPI's own idiom: `Depends(...)` as a default arg is required, not a bug
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Test files commonly have unused fixtures (pytest injects them by name)
+# and intentionally repeat setup patterns across functions.
+"tests/*" = ["B011"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"

@@ -1,6 +1,5 @@
 from typing import Optional, List
 
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.expense import Expense, ExpenseStatus, AuditLog
@@ -31,26 +30,6 @@ class ExpenseRepository:
         if status is not None:
             query = query.filter(Expense.status == status)
         return query.order_by(Expense.created_at.desc()).offset(offset).limit(limit).all()
-
-    def count(
-        self,
-        owner_id: Optional[int] = None,
-        status: Optional[ExpenseStatus] = None,
-    ) -> int:
-        query = self.db.query(func.count(Expense.id))
-        if owner_id is not None:
-            query = query.filter(Expense.owner_id == owner_id)
-        if status is not None:
-            query = query.filter(Expense.status == status)
-        return query.scalar() or 0
-
-    def list_audit_logs(self, expense_id: int) -> List[AuditLog]:
-        return (
-            self.db.query(AuditLog)
-            .filter(AuditLog.expense_id == expense_id)
-            .order_by(AuditLog.timestamp.asc(), AuditLog.id.asc())
-            .all()
-        )
 
     def create(self, owner_id: int, category: str, amount: float, description: str) -> Expense:
         expense = Expense(
@@ -85,6 +64,8 @@ class ExpenseRepository:
         return expense
 
     def delete(self, expense: Expense) -> None:
+        # Remove dependent audit rows first -- draft expenses only ever have
+        # a single "created" audit entry, so nothing meaningful is lost.
         self.db.query(AuditLog).filter(AuditLog.expense_id == expense.id).delete()
         self.db.delete(expense)
         self.db.commit()

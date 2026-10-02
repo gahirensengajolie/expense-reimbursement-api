@@ -33,10 +33,7 @@ def evaluate_spending_policy(category: str, amount: float) -> tuple[bool, float,
     policy = get_spending_policy(category)
     flagged = amount > policy.limit
     if flagged:
-        reason = (
-            f"{policy.category} expense exceeds the policy limit of "
-            f"{policy.limit:.2f}"
-        )
+        reason = f"{policy.category} expense exceeds the policy limit of " f"{policy.limit:.2f}"
     else:
         reason = "Expense is within the category policy limit"
     return flagged, policy.limit, reason

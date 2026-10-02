@@ -3,6 +3,7 @@
 Usage:
     python3 scripts/set_role.py manager@example.com manager
 """
+
 import sys
 
 from app.core.database import SessionLocal

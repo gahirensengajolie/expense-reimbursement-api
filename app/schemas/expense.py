@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.models.expense import ExpenseStatus
 
-MAX_EXPENSE_AMOUNT = 1_000_000.0
+MAX_EXPENSE_AMOUNT = 1_000_000.0  # sanity cap; adjust to business rules
 
 
 class ExpenseCreate(BaseModel):
@@ -32,20 +32,6 @@ class ExpenseReview(BaseModel):
     comment: str = Field(default="", max_length=1000)
 
 
-class AuditLogOut(BaseModel):
-    id: int
-    expense_id: int
-    actor_id: int
-    action: str
-    from_status: Optional[str]
-    to_status: Optional[str]
-    comment: str
-    timestamp: datetime
-
-    class Config:
-        from_attributes = True
-
-
 class ExpenseOut(BaseModel):
     id: int
     owner_id: int
@@ -55,9 +41,6 @@ class ExpenseOut(BaseModel):
     status: ExpenseStatus
     reviewer_id: Optional[int]
     reviewer_comment: str
-    policy_flagged: bool
-    policy_limit: float
-    policy_flag_reason: str
     created_at: datetime
     updated_at: datetime
 

@@ -7,13 +7,7 @@ from app.core.database import get_db
 from app.core.deps import get_current_user, require_roles
 from app.models.user import User, RoleEnum
 from app.models.expense import ExpenseStatus
-from app.schemas.expense import (
-    AuditLogOut,
-    ExpenseCreate,
-    ExpenseUpdate,
-    ExpenseOut,
-    ExpenseReview,
-)
+from app.schemas.expense import ExpenseCreate, ExpenseUpdate, ExpenseOut, ExpenseReview
 from app.services.expense_service import ExpenseService
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
@@ -74,28 +68,6 @@ def delete_expense(expense_id: int, db: Session = Depends(get_db), user: User = 
 def submit_expense(expense_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     service = ExpenseService(db)
     return service.submit(expense_id, user)
-
-
-@router.post("/{expense_id}/resubmit", response_model=ExpenseOut)
-def resubmit_expense(
-    expense_id: int,
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    """Return a rejected expense to the approval queue."""
-    service = ExpenseService(db)
-    return service.resubmit(expense_id, user)
-
-
-@router.get("/{expense_id}/audit", response_model=List[AuditLogOut])
-def expense_audit_history(
-    expense_id: int,
-    db: Session = Depends(get_db),
-    user: User = Depends(get_current_user),
-):
-    """View the lifecycle history for an accessible expense."""
-    service = ExpenseService(db)
-    return service.audit_history(expense_id, user)
 
 
 @router.post("/{expense_id}/review", response_model=ExpenseOut)
