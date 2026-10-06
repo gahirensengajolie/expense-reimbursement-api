@@ -2,7 +2,7 @@ services:
   - type: web
     name: passbook
     runtime: docker
-    plan: free
+    plan: starter # always-on; the free plan sleeps when idle
     healthCheckPath: /health
     envVars:
       - key: ENVIRONMENT
@@ -11,3 +11,9 @@ services:
         generateValue: true
       - key: DATABASE_URL
         sync: false # paste your Postgres connection string in the Render dashboard
+      - key: ALLOW_SELF_REGISTRATION
+        value: "false" # company mode: only admins create accounts
+      - key: FIRST_ADMIN_EMAIL
+        sync: false # the first administrator's email
+      - key: FIRST_ADMIN_PASSWORD
+        sync: false # temporary password; they must change it at first sign-in

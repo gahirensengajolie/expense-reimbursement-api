@@ -1,12 +1,20 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api, tokenStore } from '../api.js'
-import { Field } from '../components/ui.jsx'
+import { Field, PasswordInput } from '../components/ui.jsx'
 
 export default function Auth({ onAuthenticated }) {
   const [mode, setMode] = useState('login')
   const [form, setForm] = useState({ full_name: '', email: '', password: '' })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [canRegister, setCanRegister] = useState(false)
+
+  // Ask the server whether self-service sign-up is open (closed on company installs).
+  useEffect(() => {
+    api('/auth/config', { skipRefresh: true })
+      .then((config) => setCanRegister(config.allow_self_registration))
+      .catch(() => setCanRegister(false))
+  }, [])
 
   async function submit(event) {
     event.preventDefault()
@@ -45,7 +53,9 @@ export default function Auth({ onAuthenticated }) {
           <h2>{mode === 'login' ? 'Sign in' : 'Create your account'}</h2>
           <p className="auth-subtitle">
             {mode === 'login'
-              ? 'Enter your work email and password.'
+              ? canRegister
+                ? 'Enter your work email and password.'
+                : 'Enter your work email and password. Accounts are created by your administrator.'
               : 'New accounts start as employees; an admin can change your role later.'}
           </p>
 
@@ -71,10 +81,10 @@ export default function Auth({ onAuthenticated }) {
           </Field>
 
           <Field label="Password">
-            <input
+            <PasswordInput
               required
               minLength="8"
-              type="password"
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
               placeholder="At least 8 characters"
@@ -87,6 +97,7 @@ export default function Auth({ onAuthenticated }) {
             {busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}
           </button>
 
+          {(canRegister || mode === 'register') && (
           <div className="auth-switch">
             {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
             <button
@@ -100,6 +111,7 @@ export default function Auth({ onAuthenticated }) {
               {mode === 'login' ? 'Create one' : 'Sign in'}
             </button>
           </div>
+          )}
         </form>
       </section>
     </div>

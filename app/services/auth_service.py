@@ -25,6 +25,15 @@ class AuthService:
             full_name=full_name,
         )
 
+    def change_password(self, user: User, current_password: str, new_password: str) -> User:
+        if not verify_password(current_password, user.hashed_password):
+            raise BadRequestError("Current password is incorrect")
+        if verify_password(new_password, user.hashed_password):
+            raise BadRequestError("New password must be different from the current one")
+        user.hashed_password = hash_password(new_password)
+        user.must_change_password = False
+        return self.repo.save(user)
+
     def authenticate(self, email: str, password: str) -> User:
         user = self.repo.get_by_email(email)
         # Same generic error whether the email exists or the password is

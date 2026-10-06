@@ -389,3 +389,40 @@ button { cursor: pointer; }
 .mini-row:hover { background: #f6f4ef; }
 .mini-main strong { display: block; font-size: 13px; }
 .mini-main small { display: block; color: var(--ink-soft); font-size: 11px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; }
+
+/* ---- People management & misc ----------------------------------------------------- */
+
+.person-row { flex-wrap: wrap; }
+.person-disabled .person-copy { opacity: .55; }
+.person-actions { display: flex; gap: 14px; }
+.person-actions .link-btn { font-size: 12px; font-weight: 500; }
+.inline-field { display: flex; gap: 8px; }
+.inline-field input { flex: 1; font-family: var(--font-mono); }
+.load-more { padding: 14px; text-align: center; border-top: 1px solid var(--line-soft); }
+.sidebar-footer { display: flex; flex-direction: column; gap: 8px; }
+
+/* Password show/hide button */
+.password-wrap { position: relative; }
+.password-wrap input { width: 100%; padding-right: 46px; box-sizing: border-box; }
+.password-toggle {
+  position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+  width: 38px; height: 38px; display: grid; place-items: center;
+  border: 0; background: transparent; color: var(--ink-soft); cursor: pointer; border-radius: 8px;
+}
+.password-toggle:hover { color: var(--ink); }
+.password-toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
+
+/* ---- Design pass: each role's main action wears its own color --------------- */
+.app-shell[data-role='employee'] { --action: #1f6f5c; }
+.app-shell[data-role='manager'] { --action: #96600f; }
+.app-shell[data-role='admin'] { --action: #2f5a96; }
+.btn-primary { background: var(--action, var(--ink)); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--action, #0f151e); filter: brightness(0.9); }
+
+/* Keyboard users can always see where they are. */
+:focus-visible { outline: 3px solid var(--action, var(--ink)); outline-offset: 2px; }
+.sidebar :focus-visible { outline-color: #fff; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}

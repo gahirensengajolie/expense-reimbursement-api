@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -15,6 +15,7 @@ from app.schemas.expense import (
     ExpenseSummary,
     ExpenseUpdate,
 )
+from app.services.csv_export import expenses_to_csv
 from app.services.expense_service import ExpenseService
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
@@ -43,14 +44,39 @@ def list_expenses(
     return service.list(user, status=status_filter, limit=limit, offset=offset)
 
 
-# Declared before "/{expense_id}" so "summary" is not parsed as an expense id.
+# Declared before "/{expense_id}" so these fixed paths are not parsed as an expense id.
+@router.get("/counts")
+def expense_counts(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(RoleEnum.manager, RoleEnum.admin)),
+):
+    """Waiting-for-review and waiting-for-payment totals for the menu badges."""
+    return ExpenseService(db).counts(user)
+
+
+@router.get("/export")
+def export_expenses(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(RoleEnum.manager, RoleEnum.admin)),
+    status_filter: Optional[ExpenseStatus] = Query(default=None, alias="status"),
+):
+    """CSV of every expense the reviewer may see (drafts excluded), optionally by status."""
+    content = expenses_to_csv(ExpenseService(db).export_rows(user, status_filter))
+    return Response(
+        content=content,
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="passbook-expenses.csv"'},
+    )
+
+
+
 @router.get("/summary", response_model=ExpenseSummary)
 def expense_summary(
     db: Session = Depends(get_db),
-    _: User = Depends(require_roles(RoleEnum.manager, RoleEnum.admin)),
+    user: User = Depends(require_roles(RoleEnum.manager, RoleEnum.admin)),
 ):
-    """Business-wide spending totals for the manager/admin dashboard."""
-    return ExpenseService(db).summary()
+    """Spending totals for the dashboard: a manager's team, or the whole business for admins."""
+    return ExpenseService(db).summary(user)
 
 
 @router.get("/{expense_id}", response_model=ExpenseOut)

@@ -1,7 +1,7 @@
 import { initials } from '../format.js'
 import { NAV, ROLE_META } from '../roles.js'
 
-export default function Sidebar({ user, route, badges, onLogout }) {
+export default function Sidebar({ user, route, badges, onLogout, onChangePassword }) {
   const items = NAV[user.role] || []
   const sections = [...new Set(items.map((item) => item.section))]
   const meta = ROLE_META[user.role]
@@ -42,6 +42,9 @@ export default function Sidebar({ user, route, badges, onLogout }) {
             <small>{meta.tagline}</small>
           </div>
         </div>
+        <button className="link-btn" onClick={onChangePassword}>
+          Change password
+        </button>
         <button className="link-btn" onClick={onLogout}>
           Sign out
         </button>

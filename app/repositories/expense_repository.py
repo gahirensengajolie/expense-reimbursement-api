@@ -1,10 +1,11 @@
 import builtins
 from typing import Optional
 
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.expense import AuditLog, Expense, ExpenseStatus
+from app.models.user import User
 
 
 class ExpenseRepository:
@@ -24,40 +25,61 @@ class ExpenseRepository:
             .first()
         )
 
+    @staticmethod
+    def _scoped(
+        query,
+        owner_id: Optional[int],
+        status: Optional[ExpenseStatus],
+        exclude_drafts: bool,
+        team_manager_id: Optional[int],
+    ):
+        """Shared visibility filters, applied in SQL so out-of-scope rows never load.
+
+        owner_id         -> only that person's expenses (employees)
+        exclude_drafts   -> drafts are private to their owner (reviewers never see them)
+        team_manager_id  -> a manager's view: their direct reports plus unassigned employees
+        """
+        if owner_id is not None:
+            query = query.filter(Expense.owner_id == owner_id)
+        if status is not None:
+            query = query.filter(Expense.status == status)
+        if exclude_drafts:
+            query = query.filter(Expense.status != ExpenseStatus.draft)
+        if team_manager_id is not None:
+            query = query.join(User, User.id == Expense.owner_id).filter(
+                or_(User.manager_id == team_manager_id, User.manager_id.is_(None))
+            )
+        return query
+
     def list(
         self,
         owner_id: Optional[int] = None,
         status: Optional[ExpenseStatus] = None,
         limit: int = 20,
         offset: int = 0,
+        exclude_drafts: bool = False,
+        team_manager_id: Optional[int] = None,
     ) -> list[Expense]:
         query = self.db.query(Expense).options(joinedload(Expense.owner))
-        if owner_id is not None:
-            query = query.filter(Expense.owner_id == owner_id)
-        if status is not None:
-            query = query.filter(Expense.status == status)
+        query = self._scoped(query, owner_id, status, exclude_drafts, team_manager_id)
         return query.order_by(Expense.created_at.desc()).offset(offset).limit(limit).all()
 
     def count(
         self,
         owner_id: Optional[int] = None,
         status: Optional[ExpenseStatus] = None,
+        exclude_drafts: bool = False,
+        team_manager_id: Optional[int] = None,
     ) -> int:
         query = self.db.query(func.count(Expense.id))
-        if owner_id is not None:
-            query = query.filter(Expense.owner_id == owner_id)
-        if status is not None:
-            query = query.filter(Expense.status == status)
+        query = self._scoped(query, owner_id, status, exclude_drafts, team_manager_id)
         return query.scalar() or 0
 
-    def list_submitted_ever(self) -> builtins.list[Expense]:
+    def list_submitted_ever(self, team_manager_id: Optional[int] = None) -> builtins.list[Expense]:
         """Every expense that has left draft (submitted, decided or paid)."""
-        return (
-            self.db.query(Expense)
-            .options(joinedload(Expense.owner))
-            .filter(Expense.status != ExpenseStatus.draft)
-            .all()
-        )
+        query = self.db.query(Expense).options(joinedload(Expense.owner))
+        query = self._scoped(query, None, None, True, team_manager_id)
+        return query.all()
 
     def list_audit_logs(self, expense_id: int) -> builtins.list[AuditLog]:
         return (

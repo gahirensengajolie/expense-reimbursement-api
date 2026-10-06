@@ -30,5 +30,5 @@ export default function App() {
 
   if (loading) return <div className="loading-screen">Loading Passbook…</div>
   if (!user) return <Auth onAuthenticated={hydrate} />
-  return <Workspace user={user} onLogout={logout} />
+  return <Workspace user={user} onLogout={logout} onUserChanged={hydrate} />
 }

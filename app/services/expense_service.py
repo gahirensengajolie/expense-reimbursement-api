@@ -28,15 +28,39 @@ class ExpenseService:
         if not expense:
             raise NotFoundError("Expense not found")
 
-        is_owner = expense.owner_id == user.id
-        is_privileged = user.role in (RoleEnum.manager, RoleEnum.admin)
-
-        if not (is_owner or is_privileged):
+        if not (expense.owner_id == user.id or self._reviewer_can_see(expense, user)):
             # 404, not 403: don't confirm the resource exists to someone
             # with no business knowing about it.
             raise NotFoundError("Expense not found")
 
         return expense
+
+    @staticmethod
+    def _reviewer_can_see(expense: Expense, user: User) -> bool:
+        """Reviewer visibility rules.
+
+        * Drafts are private: only the owner ever sees them.
+        * Admins see everything else.
+        * Managers see their direct reports' expenses, plus those of employees
+          who have not been assigned to any manager yet.
+        """
+        if user.role not in (RoleEnum.manager, RoleEnum.admin):
+            return False
+        if expense.status == ExpenseStatus.draft:
+            return False
+        if user.role == RoleEnum.admin:
+            return True
+        owner_manager_id = expense.owner.manager_id if expense.owner else None
+        return owner_manager_id is None or owner_manager_id == user.id
+
+    @staticmethod
+    def _scope(user: User) -> dict:
+        """The same rules as _reviewer_can_see, expressed as repository filters."""
+        if user.role == RoleEnum.employee:
+            return {"owner_id": user.id}
+        if user.role == RoleEnum.manager:
+            return {"exclude_drafts": True, "team_manager_id": user.id}
+        return {"exclude_drafts": True}
 
     def _transition(
         self,
@@ -82,16 +106,32 @@ class ExpenseService:
         limit: int = 20,
         offset: int = 0,
     ) -> list[Expense]:
-        # Employees only ever see their own; managers/admins see everyone's.
-        # Scoping happens at the query level (in the repository), not by
-        # filtering an already-loaded list, so unscoped data is never even
-        # pulled into memory.
-        owner_id = user.id if user.role == RoleEnum.employee else None
-        return self.repo.list(owner_id=owner_id, status=status, limit=limit, offset=offset)
+        # Employees see their own; managers see their team; admins see all
+        # submitted expenses. Scoping happens at the query level (in the
+        # repository), not by filtering an already-loaded list, so unscoped
+        # data is never even pulled into memory.
+        return self.repo.list(status=status, limit=limit, offset=offset, **self._scope(user))
 
     def count(self, user: User, status: Optional[ExpenseStatus] = None) -> int:
-        owner_id = user.id if user.role == RoleEnum.employee else None
-        return self.repo.count(owner_id=owner_id, status=status)
+        return self.repo.count(status=status, **self._scope(user))
+
+    def counts(self, user: User) -> dict:
+        """Cheap SQL counts for the menu badges (the page list is capped, these are not)."""
+        return {
+            "pending": self.count(user, ExpenseStatus.submitted),
+            "payable": self.count(user, ExpenseStatus.approved),
+        }
+
+    def export_rows(self, user: User, status: Optional[ExpenseStatus] = None,
+                    page_size: int = 500, max_rows: int = 20000) -> "list[Expense]":
+        """Everything the user may see, fetched in pages, for the CSV export."""
+        rows: list[Expense] = []
+        while len(rows) < max_rows:
+            batch = self.repo.list(status=status, limit=page_size, offset=len(rows), **self._scope(user))
+            rows.extend(batch)
+            if len(batch) < page_size:
+                break
+        return rows[:max_rows]
 
     def audit_history(self, expense_id: int, user: User):
         self._get_visible_or_404(expense_id, user)
@@ -144,9 +184,8 @@ class ExpenseService:
         return self._transition(expense, user, ExpenseStatus.submitted, "resubmitted")
 
     def review(self, expense_id: int, reviewer: User, approve: bool, comment: str) -> Expense:
-        expense = self.repo.get_by_id(expense_id)
-        if not expense:
-            raise NotFoundError("Expense not found")
+        # Same chokepoint as reads: a manager cannot act on another team's expense.
+        expense = self._get_visible_or_404(expense_id, reviewer)
 
         # Role-gating happens at the router (require_roles), but the
         # self-approval loophole is a business rule, so it lives here.
@@ -167,14 +206,15 @@ class ExpenseService:
 
     # ---- analytics -----------------------------------------------------
 
-    def summary(self, months: int = 6) -> dict:
+    def summary(self, user: User, months: int = 6) -> dict:
         """Aggregate figures for the manager/admin dashboard.
 
         Role-gating happens at the router. Aggregation is done in Python so
         it behaves the same on SQLite and Postgres; if the table ever gets
         very large, move these into SQL GROUP BY queries.
         """
-        rows = self.repo.list_submitted_ever()
+        team = user.id if user.role == RoleEnum.manager else None
+        rows = self.repo.list_submitted_ever(team_manager_id=team)
         S = ExpenseStatus
 
         def bucket(status):

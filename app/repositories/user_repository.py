@@ -22,14 +22,27 @@ class UserRepository:
         return self.db.query(User).filter(User.email == email).first()
 
     def list_all(self) -> list[User]:
-        return self.db.query(User).all()
+        return self.db.query(User).order_by(User.id).all()
 
-    def create(self, email: str, hashed_password: str, full_name: str) -> User:
+    def has_admin(self) -> bool:
+        return self.db.query(User.id).filter(User.role == RoleEnum.admin).first() is not None
+
+    def create(
+        self,
+        email: str,
+        hashed_password: str,
+        full_name: str,
+        role: RoleEnum = RoleEnum.employee,
+        manager_id: Optional[int] = None,
+        must_change_password: bool = False,
+    ) -> User:
         user = User(
             email=email,
             hashed_password=hashed_password,
             full_name=full_name,
-            role=RoleEnum.employee,
+            role=role,
+            manager_id=manager_id,
+            must_change_password=must_change_password,
         )
         self.db.add(user)
         self.db.commit()
@@ -41,3 +54,14 @@ class UserRepository:
         self.db.commit()
         self.db.refresh(user)
         return user
+
+    def save(self, user: User) -> User:
+        self.db.commit()
+        self.db.refresh(user)
+        return user
+
+    def unassign_reports(self, manager_id: int) -> None:
+        """Move everyone managed by `manager_id` back to the unassigned pool."""
+        self.db.query(User).filter(User.manager_id == manager_id).update(
+            {User.manager_id: None}, synchronize_session=False
+        )

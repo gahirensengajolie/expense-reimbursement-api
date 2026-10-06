@@ -46,9 +46,9 @@ def test_non_owner_cannot_delete_others_draft(client):
 
 
 def test_manager_cannot_delete_employees_draft_either(client, db_session):
-    # Managers can VIEW others' expenses (needed for review), but delete
-    # is an owner-only action regardless of role -- a manager isn't
-    # entitled to destroy someone else's draft.
+    # Drafts are private to their owner: reviewers only see expenses once
+    # they are submitted, so a manager cannot even find (let alone delete)
+    # someone else's draft -- the API answers 404, not 403.
     employee_headers = register_and_login(client, "delemp@example.com")
     manager_headers = register_and_login(client, "delmanager@example.com")
     make_manager(db_session, "delmanager@example.com")
@@ -56,4 +56,4 @@ def test_manager_cannot_delete_employees_draft_either(client, db_session):
     expense_id = create_expense(client, employee_headers)
 
     resp = client.delete(f"/expenses/{expense_id}", headers=manager_headers)
-    assert resp.status_code == 403
+    assert resp.status_code == 404

@@ -5,7 +5,7 @@ import { money, titleCase } from '../format.js'
 import { go } from '../router.js'
 
 // Manager / admin view: how is money moving across the whole business.
-export default function BusinessDashboard({ notify }) {
+export default function BusinessDashboard({ user, notify }) {
   const [data, setData] = useState(null)
 
   function load() {
@@ -29,7 +29,11 @@ export default function BusinessDashboard({ notify }) {
 
   return (
     <>
-      <PageHead title="Spending dashboard" subtitle="How business expenses are moving, across everyone.">
+      <PageHead title="Spending dashboard" subtitle={
+          user.role === 'manager'
+            ? 'How spending is moving for your team (plus employees not yet assigned to a manager).'
+            : 'How business expenses are moving, across everyone.'
+        }>
         <button className="btn btn-ghost" onClick={load}>
           Refresh
         </button>

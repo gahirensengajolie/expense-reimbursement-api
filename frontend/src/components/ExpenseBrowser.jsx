@@ -4,7 +4,16 @@ import { STATUSES, money, formatDate, titleCase } from '../format.js'
 
 // Filterable expense table. `showOwner` adds a "Submitted by" column for
 // reviewers; employees only ever see their own rows so they don't need it.
-export default function ExpenseBrowser({ expenses, showOwner, onOpen, title, statuses = STATUSES, emptyText }) {
+export default function ExpenseBrowser({
+  expenses,
+  showOwner,
+  onOpen,
+  title,
+  statuses = STATUSES,
+  emptyText,
+  hasMore,
+  onLoadMore,
+}) {
   const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
 
@@ -84,6 +93,14 @@ export default function ExpenseBrowser({ expenses, showOwner, onOpen, title, sta
           </tbody>
         </table>
       </div>
+
+      {hasMore && (
+        <div className="load-more">
+          <button className="btn btn-ghost" onClick={onLoadMore}>
+            Load older expenses
+          </button>
+        </div>
+      )}
     </section>
   )
 }

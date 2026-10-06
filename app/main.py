@@ -1,3 +1,5 @@
+import logging
+import time
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -5,7 +7,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings, validate_production_settings
-from app.core.database import Base, engine
+from app.core.database import Base, SessionLocal, engine
 from app.exceptions import (
     AuthenticationError,
     BadRequestError,
@@ -14,6 +16,13 @@ from app.exceptions import (
     NotFoundError,
 )
 from app.routers import admin, auth, expenses
+from app.services.admin_service import AdminService
+
+logging.basicConfig(
+    level=settings.log_level.upper(),
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+logger = logging.getLogger("passbook")
 
 Base.metadata.create_all(bind=engine)
 
@@ -27,6 +36,13 @@ app = FastAPI(
 @app.on_event("startup")
 def reset_runtime_limits():
     validate_production_settings(settings)
+    logger.info("Starting in %s mode (database: %s)", settings.environment,
+                settings.database_url.split(":", 1)[0])
+    if settings.first_admin_email and settings.first_admin_password:
+        with SessionLocal() as db:
+            AdminService(db).ensure_first_admin(
+                settings.first_admin_email, settings.first_admin_password
+            )
     auth.reset_login_limits()
 
 
@@ -49,7 +65,15 @@ app.add_exception_handler(AuthenticationError, _error_handler(401))
 
 @app.middleware("http")
 async def add_security_headers(request: Request, call_next):
-    response = await call_next(request)
+    started = time.perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception:
+        logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+        raise
+    # Method, path, status and timing only: never bodies, tokens or query strings.
+    logger.info("%s %s -> %s (%.0f ms)", request.method, request.url.path,
+                response.status_code, (time.perf_counter() - started) * 1000)
 
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"

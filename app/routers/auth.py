@@ -5,10 +5,20 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import get_db
 from app.core.deps import get_current_user
+from app.exceptions import ForbiddenError
 from app.models.user import User
-from app.schemas.user import LoginRequest, RefreshRequest, TokenPair, UserCreate, UserOut
+from app.schemas.user import (
+    AuthConfig,
+    ChangePasswordRequest,
+    LoginRequest,
+    RefreshRequest,
+    TokenPair,
+    UserCreate,
+    UserOut,
+)
 from app.services.auth_service import AuthService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -68,8 +78,25 @@ def _enforce_login_limit(request: Request, email: str) -> None:
     attempts.append(now)
 
 
+@router.get("/config", response_model=AuthConfig)
+def auth_config():
+    """Public: lets the login screen know whether to offer 'Create account'."""
+    return AuthConfig(allow_self_registration=settings.allow_self_registration)
+
+
+@router.post("/change-password", response_model=UserOut)
+def change_password(
+    payload: ChangePasswordRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    return AuthService(db).change_password(user, payload.current_password, payload.new_password)
+
+
 @router.post("/register", response_model=UserOut, status_code=201)
 def register(payload: UserCreate, db: Session = Depends(get_db)):
+    if not settings.allow_self_registration:
+        raise ForbiddenError("Self-registration is disabled. Ask an administrator for an account.")
     service = AuthService(db)
     return service.register(payload.email, payload.password, payload.full_name)
 

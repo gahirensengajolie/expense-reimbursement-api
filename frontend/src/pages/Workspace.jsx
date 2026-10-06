@@ -1,22 +1,30 @@
 import { useEffect, useState } from 'react'
-import { api } from '../api.js'
+import { api, download } from '../api.js'
 import Sidebar from '../components/Sidebar.jsx'
 import ApprovalQueue from '../components/ApprovalQueue.jsx'
 import PeoplePanel from '../components/PeoplePanel.jsx'
 import ExpenseBrowser from '../components/ExpenseBrowser.jsx'
 import ExpenseFormModal from '../components/ExpenseFormModal.jsx'
 import ExpenseDetailModal from '../components/ExpenseDetailModal.jsx'
+import ChangePasswordModal from '../components/ChangePasswordModal.jsx'
 import { Toast, PageHead } from '../components/ui.jsx'
 import EmployeeOverview from './EmployeeOverview.jsx'
 import BusinessDashboard from './BusinessDashboard.jsx'
 import Payments from './Payments.jsx'
-import { HOME, NAV, ROLE_META } from '../roles.js'
+import { HOME, NAV, ROLE_META, isReviewer } from '../roles.js'
 import { go, useRoute } from '../router.js'
 
 // Signed-in shell. The role decides the navigation and which pages exist;
 // anything outside the role's list redirects to that role's home.
-export default function Workspace({ user, onLogout }) {
+const PAGE_SIZE = 100
+
+export default function Workspace({ user, onLogout, onUserChanged }) {
   const [expenses, setExpenses] = useState([])
+  const [hasMore, setHasMore] = useState(false)
+  // Reviewer lists/badges come from the server so they stay correct beyond the first page.
+  const [queueItems, setQueueItems] = useState([])
+  const [payableItems, setPayableItems] = useState([])
+  const [counts, setCounts] = useState({ pending: 0, payable: 0 })
   const [modal, setModal] = useState(null)
   const [toast, setToast] = useState('')
   const route = useRoute()
@@ -28,30 +36,43 @@ export default function Workspace({ user, onLogout }) {
   }, [current, user.role])
 
   function refresh(message = '') {
-    api('/expenses?limit=100')
-      .then(setExpenses)
+    api(`/expenses?limit=${PAGE_SIZE}`)
+      .then((items) => {
+        setExpenses(items)
+        setHasMore(items.length === PAGE_SIZE)
+      })
       .catch((err) => setToast(err.message))
+    if (isReviewer(user)) {
+      api('/expenses/counts').then(setCounts).catch(() => {})
+      api(`/expenses?status=submitted&limit=${PAGE_SIZE}`).then(setQueueItems).catch(() => {})
+      if (user.role === 'admin') {
+        api(`/expenses?status=approved&limit=${PAGE_SIZE}`).then(setPayableItems).catch(() => {})
+      }
+    }
     if (message) setToast(message)
   }
   useEffect(refresh, [])
 
-  const badges = {
-    pending: expenses.filter((e) => e.status === 'submitted').length,
-    payable: expenses.filter((e) => e.status === 'approved').length,
+  // Append the next page; the offset is how many rows we already hold.
+  function loadMore() {
+    api(`/expenses?limit=${PAGE_SIZE}&offset=${expenses.length}`)
+      .then((items) => {
+        setExpenses((current) => [...current, ...items])
+        setHasMore(items.length === PAGE_SIZE)
+      })
+      .catch((err) => setToast(err.message))
   }
+
+  const badges = { pending: counts.pending, payable: counts.payable }
   const open = (expense) => setModal({ type: 'detail', expense })
 
-  function exportCsv() {
-    const esc = (v) => `"${String(v ?? '').replaceAll('"', '""')}"`
-    const rows = expenses.map((e) =>
-      [e.id, esc(e.owner_name), esc(e.category), e.amount, e.status, e.created_at, esc(e.description)].join(',')
-    )
-    const csv = ['id,submitted_by,category,amount,status,created_at,description', ...rows].join('\n')
-    const link = document.createElement('a')
-    link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
-    link.download = 'passbook-expenses.csv'
-    link.click()
-    setToast('CSV exported.')
+  async function exportCsv() {
+    try {
+      await download('/expenses/export', 'passbook-expenses.csv')
+      setToast('CSV exported.')
+    } catch (err) {
+      setToast(err.message)
+    }
   }
 
   function page() {
@@ -72,20 +93,22 @@ export default function Workspace({ user, onLogout }) {
               expenses={expenses}
               onOpen={open}
               emptyText="Create your first expense to get started."
+              hasMore={hasMore}
+              onLoadMore={loadMore}
             />
           </>
         )
       case 'dashboard':
-        return <BusinessDashboard notify={setToast} />
+        return <BusinessDashboard user={user} notify={setToast} />
       case 'queue':
         return (
           <>
-            <PageHead title="Approval queue" subtitle="Requests from your team waiting on a decision." />
-            <ApprovalQueue expenses={expenses} onOpen={open} onRefresh={() => refresh()} notify={setToast} />
+            <PageHead title="Approval queue" subtitle={user.role === 'manager' ? 'Requests from your team waiting on a decision.' : 'Requests across the business waiting on a decision.'} />
+            <ApprovalQueue expenses={queueItems} onOpen={open} onRefresh={() => refresh()} notify={setToast} />
           </>
         )
       case 'payments':
-        return <Payments expenses={expenses} onOpen={open} onRefresh={refresh} notify={setToast} />
+        return <Payments expenses={payableItems} onOpen={open} onRefresh={refresh} notify={setToast} />
       case 'all':
         return (
           <>
@@ -100,6 +123,8 @@ export default function Workspace({ user, onLogout }) {
               statuses={['all', 'submitted', 'approved', 'reimbursed', 'rejected']}
               expenses={expenses.filter((e) => e.status !== 'draft')}
               onOpen={open}
+              hasMore={hasMore}
+              onLoadMore={loadMore}
             />
           </>
         )
@@ -107,7 +132,7 @@ export default function Workspace({ user, onLogout }) {
         return (
           <>
             <PageHead title="People & roles" subtitle="Decide who files, reviews and pays." />
-            <PeoplePanel notify={setToast} />
+            <PeoplePanel notify={setToast} me={user} />
           </>
         )
       default:
@@ -117,7 +142,13 @@ export default function Workspace({ user, onLogout }) {
 
   return (
     <div className="app-shell" data-role={user.role}>
-      <Sidebar user={user} route={route} badges={badges} onLogout={onLogout} />
+      <Sidebar
+        user={user}
+        route={route}
+        badges={badges}
+        onLogout={onLogout}
+        onChangePassword={() => setModal({ type: 'password' })}
+      />
 
       <main className="main">
         <header className="topbar">
@@ -135,6 +166,17 @@ export default function Workspace({ user, onLogout }) {
 
       {modal?.type === 'form' && user.role === 'employee' && (
         <ExpenseFormModal onClose={() => setModal(null)} onSaved={(msg) => { setModal(null); refresh(msg) }} />
+      )}
+      {(user.must_change_password || modal?.type === 'password') && (
+        <ChangePasswordModal
+          required={user.must_change_password}
+          onClose={() => setModal(null)}
+          onDone={(message) => {
+            setModal(null)
+            setToast(message)
+            onUserChanged()
+          }}
+        />
       )}
       {modal?.type === 'detail' && (
         <ExpenseDetailModal

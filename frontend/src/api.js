@@ -50,3 +50,23 @@ export async function api(path, options = {}) {
 
   return response.status === 204 ? null : response.json()
 }
+
+// Authenticated file download (the CSV export): fetch with the token, then save the blob.
+export async function download(path, filename) {
+  const send = () => fetch(`${BASE}${path}`, { headers: { Authorization: `Bearer ${tokenStore.access}` } })
+  let response = await send()
+  if (response.status === 401 && tokenStore.refresh) {
+    await api('/auth/me') // performs the silent token refresh
+    response = await send()
+  }
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}))
+    throw new Error(body.detail || 'Download failed. Please try again.')
+  }
+  const url = URL.createObjectURL(await response.blob())
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  link.click()
+  URL.revokeObjectURL(url)
+}
