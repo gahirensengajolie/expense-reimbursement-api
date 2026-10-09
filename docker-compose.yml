@@ -1,0 +1,27 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: expense
+      POSTGRES_PASSWORD: expense
+      POSTGRES_DB: expense
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U expense"]
+      interval: 5s
+      retries: 10
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://expense:expense@db:5432/expense
+    ports:
+      - "8000:8000"
+
+volumes:
+  pgdata:

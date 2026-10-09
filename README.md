@@ -28,6 +28,26 @@ uvicorn app.main:app --reload
 
 Visit `http://127.0.0.1:8000/docs` for interactive Swagger docs.
 
+## Company mode (deployment)
+
+Set these on the server (see `.env.example`):
+
+- `ENVIRONMENT=production` — refuses to start with a weak `SECRET_KEY` or SQLite.
+- `DATABASE_URL` — a Postgres connection string.
+- `ALLOW_SELF_REGISTRATION=false` — only admins create accounts.
+- `FIRST_ADMIN_EMAIL` / `FIRST_ADMIN_PASSWORD` — bootstraps the first admin
+  (forced to change the password at first sign-in).
+
+Docker: `docker compose up --build` starts the API plus Postgres and applies
+migrations automatically.
+
+## Database migrations
+
+```bash
+alembic upgrade head                              # apply
+alembic revision --autogenerate -m "describe change"   # after editing models
+```
+
 ## Running tests
 
 ```bash
@@ -133,7 +153,7 @@ Security headers (`X-Content-Type-Options`, `X-Frame-Options`,
 `.env.example` documents required variables without real values.
 
 **A07 – Identification and Authentication Failures**
-Login is rate-limited (5/min per IP) to slow brute-force attempts. Login
+Login is rate-limited (5/min per IP + email) to slow brute-force attempts. Login
 failure messages are identical whether the email exists or not, to avoid
 user enumeration.
 
@@ -146,6 +166,8 @@ investigation of disputed approvals.
 
 - Single-tenant only (no multi-company isolation) — kept out of scope to
   ship a working v1 fast; would be the natural next feature.
+- Login rate limiting is in-memory per process; use a shared store (e.g. Redis)
+  if running multiple instances.
 - No file/receipt upload yet.
 - No account lockout after N failed logins (only rate limiting).
 - `pip-audit` runs in CI but doesn't block merges yet — findings are

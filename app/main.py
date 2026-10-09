@@ -105,5 +105,10 @@ def health_check():
 # This catch-all is intentionally last so API and health routes always win.
 frontend_root = Path(__file__).resolve().parent.parent / "frontend"
 frontend_dir = frontend_root / "dist" if (frontend_root / "dist").exists() else frontend_root
-if frontend_dir.exists():
+if (frontend_dir / "index.html").exists():
     app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+else:
+    # No frontend build present (API-only deployment): give "/" a useful answer.
+    @app.get("/", include_in_schema=False)
+    def root():
+        return {"service": "expense-reimbursement-api", "docs": "/docs", "health": "/health"}

@@ -8,3 +8,5 @@ htmlcov/
 venv/
 .venv/
 *.egg-info/
+.ruff_cache/
+.venv/
