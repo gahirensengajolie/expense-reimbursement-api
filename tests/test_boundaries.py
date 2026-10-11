@@ -18,10 +18,6 @@ def create_expense(client, headers, **overrides):
     payload.update(overrides)
     return client.post("/expenses", json=payload, headers=headers)
 
-
-# ---- expense amount: (0, MAX_EXPENSE_AMOUNT] --------------------------
-
-
 def test_amount_at_max_is_accepted(client):
     headers = register_and_login(client, "bound-amt-max@example.com")
     resp = create_expense(client, headers, amount=MAX_EXPENSE_AMOUNT)
@@ -46,9 +42,6 @@ def test_amount_exactly_zero_is_rejected(client):
     assert resp.status_code == 422
 
 
-# ---- description length: [0, 1000] -------------------------------------
-
-
 def test_description_at_max_length_is_accepted(client):
     headers = register_and_login(client, "bound-desc-max@example.com")
     resp = create_expense(client, headers, description="x" * 1000)
@@ -66,10 +59,6 @@ def test_empty_description_is_accepted(client):
     headers = register_and_login(client, "bound-desc-empty@example.com")
     resp = create_expense(client, headers, description="")
     assert resp.status_code == 201
-
-
-# ---- password length: [8, 128] ------------------------------------------
-
 
 def test_password_at_min_length_is_accepted(client):
     resp = client.post(
@@ -101,10 +90,6 @@ def test_password_one_char_over_max_is_rejected(client):
         json={"email": "bound-pw-over@example.com", "password": "a" * 129, "full_name": "A"},
     )
     assert resp.status_code == 422
-
-
-# ---- pagination: limit in [1, 100], offset >= 0 --------------------------
-
 
 def test_list_limit_at_max_is_accepted(client):
     headers = register_and_login(client, "bound-limit-max@example.com")
@@ -141,10 +126,6 @@ def test_list_offset_negative_is_rejected(client):
     resp = client.get("/expenses?offset=-1", headers=headers)
     assert resp.status_code == 422
 
-
-# ---- spending policy: flag boundary is strictly > limit, not >= ---------
-
-
 def test_amount_exactly_at_policy_limit_is_not_flagged(client):
     # meals limit is 500.0; the policy uses `amount > limit`, so exactly
     # 500 must NOT be flagged -- this is the off-by-one case that matters.
@@ -161,9 +142,6 @@ def test_amount_one_cent_over_policy_limit_is_flagged(client):
     assert resp.json()["policy_flagged"] is True
 
 
-# ---- login rate limit: exactly 5 attempts allowed per window ------------
-
-
 def test_fifth_failed_login_is_still_allowed_sixth_is_blocked(client):
     email = "bound-ratelimit@example.com"
     client.post(
@@ -175,7 +153,6 @@ def test_fifth_failed_login_is_still_allowed_sixth_is_blocked(client):
         resp = client.post("/auth/login", json={"email": email, "password": "wrong"})
         statuses.append(resp.status_code)
 
-    # first 5 attempts are evaluated as real login attempts (401, wrong password)
     assert statuses[:5] == [401, 401, 401, 401, 401]
     # the 6th is blocked by the limiter itself
     assert statuses[5] == 429

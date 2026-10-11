@@ -29,9 +29,6 @@ def file_expense(client, headers, submit=True):
     return expense_id
 
 
-# ---- registration ----------------------------------------------------------
-
-
 def test_self_registration_can_be_disabled(client, monkeypatch):
     assert client.get("/auth/config").json() == {"allow_self_registration": True}
 
@@ -42,9 +39,6 @@ def test_self_registration_can_be_disabled(client, monkeypatch):
         json={"email": "x@example.com", "password": "StrongPass123", "full_name": "X"},
     )
     assert resp.status_code == 403
-
-
-# ---- admin-managed accounts --------------------------------------------------
 
 
 def test_admin_creates_account_that_must_change_password(client, db_session):
@@ -136,10 +130,6 @@ def test_admin_cannot_demote_or_disable_themselves(client, db_session):
         == 400
     )
 
-
-# ---- passwords ---------------------------------------------------------------
-
-
 def test_change_password(client, db_session):
     admin = make_admin_headers(client, db_session)
     client.post(
@@ -192,10 +182,6 @@ def test_admin_can_reset_a_forgotten_password(client, db_session):
     assert login(client, "forgot@example.com", "StrongPass123").status_code == 401
     assert login(client, "forgot@example.com", "Reset-Passw0rd").status_code == 200
 
-
-# ---- first admin bootstrap -----------------------------------------------------
-
-
 def test_first_admin_is_created_once(db_session):
     service = AdminService(db_session)
     admin = service.ensure_first_admin("root@example.com", "LongPassw0rd")
@@ -208,10 +194,6 @@ def test_first_admin_is_created_once(db_session):
 def test_first_admin_rejects_short_password(db_session):
     with pytest.raises(RuntimeError):
         AdminService(db_session).ensure_first_admin("root@example.com", "short")
-
-
-# ---- teams and visibility --------------------------------------------------------
-
 
 @pytest.fixture
 def company(client, db_session):

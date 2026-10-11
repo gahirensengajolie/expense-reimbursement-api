@@ -1,6 +1,4 @@
 from tests.conftest import make_manager, register_and_login
-
-
 def test_rejected_expense_can_be_resubmitted_and_audited(client, db_session):
     employee = register_and_login(client, "audit-employee@example.com")
     manager = register_and_login(client, "audit-manager@example.com")

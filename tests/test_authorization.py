@@ -120,7 +120,6 @@ def test_only_admin_can_reimburse(client, db_session):
         headers=manager_headers,
     )
 
-    # manager (not admin) tries to reimburse -- should be forbidden
     resp = client.post(f"/expenses/{expense_id}/reimburse", headers=manager_headers)
     assert resp.status_code == 403
 
