@@ -116,7 +116,7 @@ removed. This is a deliberate business rule, not a missing feature.
   oversized strings, missing fields.
 - **Coverage gate in CI**: build fails if coverage drops below 80%.
 
-Run `pytest -v` to see the full list of test names/intentions — the test
+Run `pytest -v` to see the full list of test names/intentions the test
 names describe the security property or business rule under test.
 
 ## Security write-up
