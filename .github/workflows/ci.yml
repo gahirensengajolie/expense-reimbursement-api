@@ -37,6 +37,8 @@ jobs:
 
   frontend:
     runs-on: ubuntu-latest
+    env:
+      CYPRESS_INSTALL_BINARY: "0"  # only the e2e job needs the Cypress browser
     defaults:
       run:
         working-directory: frontend
@@ -55,3 +57,50 @@ jobs:
 
       - name: Build production bundle
         run: npm run build
+
+  e2e:
+    # Cypress end-to-end tests: real browser, real app, temporary database.
+    # NON-BLOCKING for now: remove the next line once the suite has passed
+    # on your own computer (npm run e2e) and once here.
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install backend dependencies
+        run: pip install -r requirements.txt
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Cache the Cypress browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/Cypress
+          key: cypress-${{ runner.os }}-${{ hashFiles('frontend/package-lock.json') }}
+
+      - name: Install frontend dependencies (also downloads Cypress)
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run the end-to-end tests
+        working-directory: frontend
+        run: npm run e2e
+
+      - name: Keep screenshots of failures
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots
+          path: frontend/cypress/screenshots
+          if-no-files-found: ignore

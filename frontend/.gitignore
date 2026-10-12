@@ -1,3 +1,6 @@
 
 node_modules/
 dist/
+cypress/downloads/
+cypress/screenshots/
+cypress/videos/

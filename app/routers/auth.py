@@ -24,7 +24,6 @@ from app.services.auth_service import AuthService
 router = APIRouter(prefix="/auth", tags=["auth"])
 _login_attempts: dict[str, deque[float]] = defaultdict(deque)
 _LOGIN_WINDOW_SECONDS = 60.0
-_LOGIN_MAX_ATTEMPTS = 5
 
 
 def reset_login_limits() -> None:
@@ -73,7 +72,7 @@ def _enforce_login_limit(request: Request, email: str) -> None:
     attempts = _login_attempts[key]
     while attempts and now - attempts[0] >= _LOGIN_WINDOW_SECONDS:
         attempts.popleft()
-    if len(attempts) >= _LOGIN_MAX_ATTEMPTS:
+    if len(attempts) >= settings.login_max_attempts:
         raise HTTPException(status_code=429, detail="Too many login attempts")
     attempts.append(now)
 

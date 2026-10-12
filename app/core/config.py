@@ -26,6 +26,11 @@ class Settings(BaseSettings):
 
     log_level: str = "INFO"
 
+    # Failed-or-not sign-in attempts allowed per minute for one IP + email.
+    # Keep the default in production; the end-to-end tests raise it because
+    # they sign in as the same few users many times.
+    login_max_attempts: int = 5
+
     # A company system should not let strangers create accounts: set
     # ALLOW_SELF_REGISTRATION=false on the server and let admins add people.
     allow_self_registration: bool = True
