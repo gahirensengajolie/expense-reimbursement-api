@@ -29,8 +29,7 @@ def _submit(client, headers, **overrides):
     return expense_id
 
 
-# ---- only employees can create ------------------------------------------
-
+# only employees can create expenses
 
 def test_employee_can_create_expense(client):
     resp = client.post("/expenses", json=PAYLOAD, headers=_employee(client, "e1@example.com"))
@@ -54,7 +53,7 @@ def test_demoted_to_manager_stops_being_able_to_create(client, db_session):
     assert client.post("/expenses", json=PAYLOAD, headers=headers).status_code == 403
 
 
-# ---- reviewers can see who submitted -------------------------------------
+#reviewers can see who submitted 
 
 
 def test_expense_includes_owner_name(client, db_session):
@@ -65,7 +64,7 @@ def test_expense_includes_owner_name(client, db_session):
     assert body["owner_name"] == "Amina Uwase"
 
 
-# ---- summary endpoint -----------------------------------------------------
+#summary endpoint 
 
 
 def test_summary_forbidden_for_employee(client):

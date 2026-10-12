@@ -1,0 +1,15 @@
+{
+  "name": "passbook-qa",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "End-to-end (Cypress) tests for Passbook: real browser, real app",
+  "scripts": {
+    "e2e": "bash e2e.sh",
+    "e2e:open": "bash e2e.sh open",
+    "verify": "cypress verify"
+  },
+  "devDependencies": {
+    "cypress": "^16.1.1"
+  }
+}

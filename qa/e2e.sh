@@ -1,22 +1,29 @@
 #!/usr/bin/env bash
 # Run the Cypress end-to-end tests against a throwaway copy of the real app.
 #
-#   bash scripts/e2e.sh          headless, like CI   (or: cd frontend && npm run e2e)
-#   bash scripts/e2e.sh open     interactive Cypress window  (npm run e2e:open)
+#   cd qa && npm run e2e         headless, like CI
+#   cd qa && npm run e2e:open    interactive Cypress window
 #
 # It builds the frontend, starts the API (serving that build) on a temporary
 # SQLite database in "company mode" (sign-up closed, first admin from the
 # environment), runs Cypress, then stops the server and deletes the database.
 # Your real .env and database are never touched.
 set -u
-cd "$(dirname "$0")/.." || exit 1
+QA_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$QA_DIR/.." && pwd)"
+cd "$ROOT" || exit 1
 
 PORT="${E2E_PORT:-8010}"
 DB="$(mktemp -u /tmp/passbook_e2e_XXXXXX).db"
 LOG="${TMPDIR:-/tmp}/passbook_e2e_server.log"
 export CYPRESS_BASE_URL="http://127.0.0.1:${PORT}"
 
+if [ -z "${E2E_RUNNER:-}" ] && [ ! -d "$QA_DIR/node_modules" ]; then
+  echo "Cypress is not installed yet. Run:  cd qa && npm ci"; exit 1
+fi
+
 echo "==> Building the frontend"
+[ -d frontend/node_modules ] || (cd frontend && npm ci) || { echo "Frontend install failed"; exit 1; }
 (cd frontend && npm run build >/dev/null) || { echo "Frontend build failed"; exit 1; }
 
 echo "==> Starting the app on ${CYPRESS_BASE_URL} (temporary database)"
@@ -40,7 +47,7 @@ done
 curl -fs "${CYPRESS_BASE_URL}/health" >/dev/null 2>&1 || { echo "The app did not become ready:"; tail -20 "$LOG"; exit 1; }
 
 echo "==> Running Cypress"
-cd frontend || exit 1
+cd "$QA_DIR" || exit 1
 if [ -n "${E2E_RUNNER:-}" ]; then
   eval "$E2E_RUNNER"            # advanced: replace Cypress with another command
 elif [ "${1:-run}" = "open" ]; then

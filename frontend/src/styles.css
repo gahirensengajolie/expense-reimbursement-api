@@ -1,5 +1,3 @@
-/* ---- Tokens ---------------------------------------------------------- */
-
 :root {
   --ink: #1c2430;
   --ink-soft: #5b6472;
@@ -40,7 +38,6 @@ button { cursor: pointer; }
 .muted { color: var(--ink-soft); font-size: 12px; }
 .loading-screen { min-height: 100vh; display: grid; place-items: center; color: var(--ink-soft); }
 
-/* ---- Buttons ----------------------------------------------------------- */
 
 .btn {
   border: 1px solid transparent;
@@ -59,7 +56,6 @@ button { cursor: pointer; }
 .btn-compact { padding: 7px 11px; font-size: 12px; }
 .link-btn { border: 0; background: none; padding: 0; color: var(--ink); font-weight: 600; text-decoration: underline; }
 
-/* ---- Auth screen --------------------------------------------------------- */
 
 .auth-screen {
   min-height: 100vh;
@@ -105,8 +101,6 @@ button { cursor: pointer; }
 }
 .form-error { background: var(--alert-bg); color: var(--alert); border-radius: 4px; padding: 10px 12px; font-size: 12px; margin-bottom: 14px; }
 .auth-switch { text-align: center; color: var(--ink-soft); margin-top: 20px; font-size: 13px; }
-
-/* ---- App shell ----------------------------------------------------------- */
 
 .app-shell { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
 
@@ -185,8 +179,6 @@ button { cursor: pointer; }
 .page-head p { color: var(--ink-soft); margin: 0; }
 .page-actions { display: flex; gap: 10px; }
 
-/* ---- Metrics ------------------------------------------------------------- */
-
 .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); margin-bottom: 28px; }
 .metric { background: var(--surface); padding: 18px 20px; border-left: 3px solid var(--draft); }
 .metric-verified { border-left-color: var(--verified); }
@@ -194,8 +186,6 @@ button { cursor: pointer; }
 .metric-alert { border-left-color: var(--alert); }
 .metric-label { display: block; font-size: 12px; color: var(--ink-soft); margin-bottom: 10px; }
 .metric-value { font-family: var(--font-mono); font-size: 22px; font-weight: 600; }
-
-/* ---- Cards & workspace ---------------------------------------------------- */
 
 .workspace-grid { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(220px, 0.7fr); gap: 20px; align-items: start; }
 .card { background: var(--surface); border: 1px solid var(--line); }
@@ -237,8 +227,6 @@ button { cursor: pointer; }
 .empty-state strong { display: block; color: var(--ink); margin-bottom: 4px; }
 .empty-state p { margin: 0; font-size: 12px; }
 
-/* ---- Status tags (left-border label, not a pill) -------------------------- */
-
 .status-tag { font-size: 12px; font-weight: 600; text-transform: capitalize; padding-left: 10px; position: relative; }
 .status-tag::before { content: ''; position: absolute; left: 0; top: 3px; width: 3px; height: 12px; background: currentColor; }
 .status-approved, .status-reimbursed { color: var(--verified); }
@@ -246,15 +234,11 @@ button { cursor: pointer; }
 .status-rejected { color: var(--alert); }
 .status-draft { color: var(--draft); }
 
-/* ---- Progress ------------------------------------------------------------ */
-
 .progress { margin-top: 16px; }
 .progress:first-of-type { margin-top: 4px; }
 .progress-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; }
 .progress-track { height: 5px; background: var(--line-soft); }
 .progress-fill { height: 100%; background: var(--ink); }
-
-/* ---- Approval queue -------------------------------------------------------- */
 
 .pending-count { background: var(--flagged-bg); color: var(--flagged); font-size: 11px; font-weight: 700; padding: 5px 10px; }
 .queue-list { padding: 0 20px; }
@@ -263,8 +247,6 @@ button { cursor: pointer; }
 .queue-main small { display: block; color: var(--ink-soft); font-size: 11px; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .queue-amount { font-family: var(--font-mono); font-weight: 600; text-align: right; }
 .queue-actions { display: flex; gap: 6px; justify-content: flex-end; }
-
-/* ---- People panel ---------------------------------------------------------- */
 
 .people-list { padding: 0 20px; }
 .person-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line-soft); }
@@ -275,8 +257,6 @@ button { cursor: pointer; }
 .status-dot { font-size: 11px; color: var(--verified); min-width: 56px; }
 .status-dot::before { content: ''; display: inline-block; width: 6px; height: 6px; background: currentColor; border-radius: 50%; margin-right: 5px; }
 .status-dot.inactive { color: var(--alert); }
-
-/* ---- Modal ------------------------------------------------------------------ */
 
 .modal-backdrop { position: fixed; inset: 0; background: rgba(28, 36, 48, .5); z-index: 10; display: grid; place-items: center; padding: 20px; }
 .modal { background: var(--surface); width: min(520px, 100%); max-height: 90vh; overflow-y: auto; border: 1px solid var(--line); }
@@ -302,8 +282,6 @@ button { cursor: pointer; }
 .comment-box { margin-top: 18px; resize: vertical; min-height: 70px; }
 
 .toast { position: fixed; z-index: 20; bottom: 20px; right: 20px; background: var(--ink); color: var(--surface); padding: 12px 16px; font-size: 13px; }
-
-/* ---- Responsive ------------------------------------------------------------- */
 
 @media (max-width: 1050px) {
   .metric-grid { grid-template-columns: repeat(2, 1fr); }
@@ -332,10 +310,6 @@ button { cursor: pointer; }
   .queue-actions { grid-column: 1 / -1; justify-content: flex-start; }
 }
 
-
-/* ---- Role identity ------------------------------------------------------------
-   Each role gets its own accent so it is obvious which console you are in. */
-
 .app-shell[data-role='employee'] { --accent: #1f6f5c; }
 .app-shell[data-role='manager'] { --accent: #b9791f; }
 .app-shell[data-role='admin'] { --accent: #3d6aa8; }
@@ -347,8 +321,6 @@ button { cursor: pointer; }
 .avatar { background: var(--accent, var(--verified)); color: var(--surface); }
 .topbar { border-bottom: 2px solid var(--accent, var(--line)); }
 .btn-primary { background: var(--ink); }
-
-/* ---- Dashboard ------------------------------------------------------------------ */
 
 .metric-hint { display: block; margin-top: 6px; font-size: 11px; color: var(--ink-soft); }
 .metric-action { text-align: left; border: 0; border-left: 3px solid var(--accent, var(--ink)); }
@@ -381,16 +353,12 @@ button { cursor: pointer; }
 .legend strong { margin-left: auto; font-family: var(--font-mono); }
 .legend i { width: 10px; height: 10px; display: inline-block; }
 
-/* ---- Employee lists --------------------------------------------------------------- */
-
 .mini-list { padding: 0 8px 8px; }
 .mini-row { display: grid; grid-template-columns: 1fr auto 90px; gap: 12px; align-items: center; width: 100%; text-align: left; background: none; border: 0; border-top: 1px solid var(--line-soft); padding: 12px; }
 .mini-row:first-child { border-top: 0; }
 .mini-row:hover { background: #f6f4ef; }
 .mini-main strong { display: block; font-size: 13px; }
 .mini-main small { display: block; color: var(--ink-soft); font-size: 11px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 260px; }
-
-/* ---- People management & misc ----------------------------------------------------- */
 
 .person-row { flex-wrap: wrap; }
 .person-disabled .person-copy { opacity: .55; }
@@ -412,7 +380,6 @@ button { cursor: pointer; }
 .password-toggle:hover { color: var(--ink); }
 .password-toggle:focus-visible { outline: 2px solid currentColor; outline-offset: 1px; }
 
-/* ---- Design pass: each role's main action wears its own color --------------- */
 .app-shell[data-role='employee'] { --action: #1f6f5c; }
 .app-shell[data-role='manager'] { --action: #96600f; }
 .app-shell[data-role='admin'] { --action: #2f5a96; }

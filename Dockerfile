@@ -2,8 +2,6 @@
 FROM node:22-slim AS frontend
 WORKDIR /frontend
 COPY frontend/package.json frontend/package-lock.json ./
-# Cypress (tests only) would download a ~200 MB browser; the build does not need it.
-ENV CYPRESS_INSTALL_BINARY=0
 RUN npm ci
 COPY frontend/ ./
 RUN npm run build

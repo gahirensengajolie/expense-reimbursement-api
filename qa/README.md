@@ -1,4 +1,4 @@
-# End-to-end tests (Cypress)
+# QA: end-to-end tests (Cypress)
 
 These tests open a real browser, sign in as an employee, a manager and an admin, and use the
 app the way a person would. They run against a **temporary copy** of the app and database,
@@ -6,12 +6,12 @@ so your real data is never touched.
 
 ## Run them
 
-    cd frontend
+    cd qa
     npm ci                 # first time only (downloads Cypress, ~200 MB)
     npm run e2e            # headless: prints a pass/fail list, like CI
     npm run e2e:open       # interactive window: watch each step, great for debugging
 
-`npm run e2e` calls `scripts/e2e.sh`, which builds the frontend, starts the app on port 8010
+`npm run e2e` calls `e2e.sh`, which builds the frontend, starts the app on port 8010
 (sign-up closed, first admin from the environment), runs Cypress, then cleans up.
 If port 8010 is busy: `E2E_PORT=8011 npm run e2e`.
 
@@ -48,8 +48,8 @@ If port 8010 is busy: `E2E_PORT=8011 npm run e2e`.
 Cypress downloads its own ~200 MB test browser when you install. On a slow or interrupted
 connection that download fails. Nothing is wrong with the project. To recover:
 
-    cd frontend
-    CYPRESS_INSTALL_BINARY=0 npm ci        # installs everything except the Cypress browser (the app works)
+    cd qa
+    CYPRESS_INSTALL_BINARY=0 npm ci        # installs everything except the Cypress browser
     df -h ~ | tail -1                      # need roughly 1 GB free
     DEBUG=cypress:cli* npx cypress install # install just the browser, with detailed messages
 
@@ -63,3 +63,15 @@ If that keeps failing, download it yourself with a command that can resume, then
 If `cypress verify` mentions missing libraries (Ubuntu), install them:
 
     sudo apt-get install -y libgtk2.0-0 libgtk-3-0 libgbm-dev libnotify-dev libnss3 libxss1 libasound2 libxtst6 xauth xvfb
+
+## Where things live
+
+```
+expense-api/
+  app/ , tests/    backend (FastAPI) and its pytest tests
+  frontend/        the React app
+  qa/              these end-to-end tests (browser-level, cover frontend + backend together)
+    cypress/e2e/       the test files
+    cypress/support/   helpers: seeding people/expenses through the API, login shortcuts
+    e2e.sh             starts a temporary copy of the app and runs Cypress
+```
